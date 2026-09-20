@@ -27,6 +27,17 @@ export function CameraRig({ state }: { state: ViewerState }) {
       .sub(target)
       .multiplyScalar(scale)
       .add(target);
+    if (
+      state.mode === "Print demo" &&
+      state.view === "Perspective" &&
+      !state.selected
+    ) {
+      target.set(0, 3.1, 0);
+      eye = new Vector3(6.5, 5.8, 10)
+        .sub(target)
+        .multiplyScalar(scale)
+        .add(target);
+    }
     if (state.selected) {
       const p = byId[state.selected];
       target = new Vector3(...explodedPosition(p, state.explosion));

@@ -13,6 +13,8 @@ import { explodedPosition } from "./explosionTransforms";
 import { CameraRig } from "./CameraRig";
 import { LabelLayout } from "./LabelLayout";
 import type { ViewerState } from "./types";
+import { PrintDemo } from "./PrintDemo";
+import { PRINT_DURATION, samplePrint } from "./printPaths";
 
 const toolIds = new Set([
   "carriage",
@@ -56,6 +58,9 @@ export function highlighted(p: Part, s: ViewerState) {
     case "Maintenance":
       return Boolean(p.maintenance);
     case "Print demo":
+      return ["Build platform", "Dual toolhead", "Motion system"].includes(
+        p.category,
+      );
     case "Dual nozzle":
       return !["Enclosure"].includes(p.category) || p.id === "frame";
     default:
@@ -63,69 +68,14 @@ export function highlighted(p: Part, s: ViewerState) {
   }
 }
 function motion(t: number, mode?: string, nozzle = "Left") {
-  return mode === "Print demo"
-    ? {
-        x: Math.cos(t * 1.8) * 0.8 + (nozzle === "Left" ? 0.24 : -0.24),
-        z: Math.sin(t * 1.8) * 0.8 - 0.65,
-      }
-    : { x: Math.sin(t * 0.53) * 1.15, z: Math.cos(t * 0.37) * 1.1 };
-}
-function Demo({
-  state,
-  time,
-}: {
-  state: ViewerState;
-  time: React.RefObject<number>;
-}) {
-  const printed = useRef<THREE.Group>(null);
-  const strand = useRef<THREE.Mesh>(null);
-  const { invalidate } = useThree();
-  const material = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: "#a7d880", roughness: 0.5 }),
-    [],
-  );
-  useFrame(() => {
-    if (!printed.current) return;
-    const phase = (time.current % 48) / 48;
-    const layer = Math.floor(phase * 36);
-    printed.current.children.forEach((c, i) => {
-      c.visible = i <= layer;
-    });
-    const bedY = 3.66 - phase * 0.8;
-    printed.current.position.y = bedY;
-    const m = motion(time.current, state.mode, state.nozzle);
-    if (strand.current) {
-      strand.current.position.set(
-        m.x + (state.nozzle === "Left" ? -0.24 : 0.24),
-        3.66,
-        m.z + 0.65,
-      );
-      strand.current.scale.y = 0.65;
-    }
-    if (state.running && !state.reducedMotion) invalidate();
-  });
-  return (
-    <>
-      <group ref={printed}>
-        {Array.from({ length: 36 }, (_, i) => (
-          <mesh
-            key={i}
-            position={[0, i * 0.0222, 0]}
-            rotation={[Math.PI / 2, 0, 0]}
-            material={material}
-          >
-            <torusGeometry args={[0.8, 0.03, 5, 48]} />
-          </mesh>
-        ))}
-      </group>
-      <mesh ref={strand}>
-        <cylinderGeometry args={[0.011, 0.011, 0.08, 8]} />
-        <meshBasicMaterial
-          color={state.nozzle === "Left" ? "#b5ed87" : "#a8d0ed"}
-        />
-      </mesh>
-    </>
-  );
+  if (mode === "Print demo") {
+    const frame = samplePrint(t);
+    return {
+      x: frame.x + (nozzle === "Left" ? 0.24 : -0.24),
+      z: frame.z - 0.65,
+    };
+  }
+  return { x: Math.sin(t * 0.53) * 1.15, z: Math.cos(t * 0.37) * 1.1 };
 }
 function Flow({
   state,
@@ -253,7 +203,8 @@ function AssemblyPart({
   useEffect(() => {
     model.traverse((o) => {
       if (!(o instanceof THREE.Mesh)) return;
-      const mat = o.material as THREE.MeshStandardMaterial | THREE.MeshBasicMaterial;
+      const mat = o.material as
+        THREE.MeshStandardMaterial | THREE.MeshBasicMaterial;
       mat.clippingPlanes = clipping;
       const ghost =
         state.ghost.includes(part.id) ||
@@ -333,7 +284,7 @@ function AssemblyPart({
       if (["bed", "plate", "bed-frame", "bed-sensors"].includes(part.id))
         pos[1] +=
           state.mode === "Print demo"
-            ? 1.74 - ((time.current % 48) / 48) * 0.8
+            ? samplePrint(time.current).bedOffset
             : state.mode === "Motion"
               ? -(1 + Math.sin(time.current * 0.2)) * 0.45
               : 0;
@@ -346,7 +297,9 @@ function AssemblyPart({
     const dest = new THREE.Vector3(...pos);
     group.current.position.lerp(
       dest,
-      state.reducedMotion ? 1 : 1 - Math.exp(-dt * 9),
+      state.reducedMotion || state.mode === "Print demo"
+        ? 1
+        : 1 - Math.exp(-dt * 9),
     );
     if (group.current.position.distanceTo(dest) > 0.001) invalidate();
     if (part.id === "ptfe") {
@@ -354,7 +307,10 @@ function AssemblyPart({
       const x = following ? m.x : 0,
         z = following ? m.z : 0;
       const travel = tubeTravel.current;
-      const alpha = state.reducedMotion ? 1 : 1 - Math.exp(-dt * 9);
+      const alpha =
+        state.reducedMotion || state.mode === "Print demo"
+          ? 1
+          : 1 - Math.exp(-dt * 9);
       travel.x += (x - travel.x) * alpha;
       travel.y += (z - travel.y) * alpha;
       model.traverse((o) => {
@@ -428,13 +384,16 @@ function World({
   onSelect,
   onReady,
   balanced,
+  onPrintProgress,
 }: {
   state: ViewerState;
   onSelect: (id: string) => void;
   onReady: () => void;
   balanced: boolean;
+  onPrintProgress: (progress: number) => void;
 }) {
   const time = useRef(0);
+  const lastPrintProgress = useRef(-1);
   const { invalidate, gl } = useThree();
   const clipping = useMemo(() => {
     if (state.section === "Off") return [];
@@ -460,7 +419,16 @@ function World({
   useFrame((_, dt) => {
     if (state.running && !state.reducedMotion) {
       time.current += Math.min(dt, 0.05) * state.speed;
+      if (state.mode === "Print demo")
+        time.current = Math.min(time.current, PRINT_DURATION);
       invalidate();
+    }
+    if (state.mode === "Print demo") {
+      const progress = Math.floor((time.current / PRINT_DURATION) * 100 + 1e-7);
+      if (progress !== lastPrintProgress.current) {
+        lastPrintProgress.current = progress;
+        onPrintProgress(progress);
+      }
     }
   });
   useEffect(() => {
@@ -468,8 +436,16 @@ function World({
   }, [state, invalidate]);
   useEffect(() => {
     time.current = 0;
+    lastPrintProgress.current = -1;
     invalidate();
   }, [state.mode, invalidate]);
+  useEffect(() => {
+    if (state.mode === "Print demo") {
+      time.current = (state.printSeek * PRINT_DURATION) / 100;
+      lastPrintProgress.current = -1;
+      invalidate();
+    }
+  }, [state.printSeek, state.printKey, state.mode, invalidate]);
   const modeLabels: Partial<Record<ViewerState["mode"], string[]>> = {
     Standard: ["display", "door", "plate"],
     "Dual nozzle": ["extruders", "hotend-left", "hotend-right", "lift"],
@@ -546,7 +522,9 @@ function World({
       {(state.mode === "Filament" || state.mode === "Airflow") && (
         <Flow state={state} time={time} />
       )}
-      {state.mode === "Print demo" && <Demo state={state} time={time} />}
+      {state.mode === "Print demo" && state.explosion < 0.02 && (
+        <PrintDemo time={time} />
+      )}
       {state.mode === "Dual nozzle" && (
         <group position={[0, 1.99, 0]}>
           <mesh position={[0, 0.68, 0]}>
@@ -580,10 +558,12 @@ export default function PrinterScene({
   state,
   onSelect,
   onReady,
+  onPrintProgress,
 }: {
   state: ViewerState;
   onSelect: (id: string) => void;
   onReady: () => void;
+  onPrintProgress: (progress: number) => void;
 }) {
   const [narrow, setNarrow] = useState(
     () => window.matchMedia("(max-width: 1000px)").matches,
@@ -622,6 +602,7 @@ export default function PrinterScene({
         onSelect={onSelect}
         onReady={onReady}
         balanced={balanced}
+        onPrintProgress={onPrintProgress}
       />
     </Canvas>
   );

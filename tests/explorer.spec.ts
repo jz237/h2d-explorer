@@ -1,5 +1,69 @@
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
+test("complex print supports scrubbing, completion, restart and pause", async ({
+  page,
+}) => {
+  await page
+    .getByRole("toolbar")
+    .getByRole("button", { name: "Print demo", exact: true })
+    .click();
+  const progress = page.getByRole("slider", {
+    name: "Print progress",
+    exact: true,
+  });
+  await progress.fill("65");
+  await expect(progress).toHaveValue("65");
+  await expect(
+    page.getByRole("button", { name: "Play animation" }),
+  ).toBeVisible();
+  await page.waitForTimeout(400);
+  await expect(progress).toHaveValue("65");
+  await page.getByRole("button", { name: "Show finished print" }).click();
+  await expect(progress).toHaveValue("100");
+  await expect(page.getByText("Print complete", { exact: true })).toBeVisible();
+  await page.screenshot({ path: "work/lantern-tested.png" });
+  await page.getByRole("button", { name: "Restart print" }).click();
+  await expect
+    .poll(async () => Number(await progress.inputValue()))
+    .toBeLessThan(10);
+  await expect(
+    page.getByRole("button", { name: "Pause animation" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Pause animation" }).click();
+  const paused = await progress.inputValue();
+  await page.waitForTimeout(400);
+  await expect(progress).toHaveValue(paused);
+});
+
+test("mobile reduced-motion tour can inspect a finished lantern", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.reload();
+  await page.getByRole("button", { name: "How a print happens" }).click();
+  await page
+    .getByRole("navigation", { name: "Print tour steps" })
+    .getByRole("button", { name: "Build", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Show finished print" }).click();
+  await expect(
+    page.getByRole("slider", { name: "Print progress", exact: true }),
+  ).toHaveValue("100");
+  await expect(
+    page.getByRole("button", { name: "Play animation" }),
+  ).toBeDisabled();
+  const tour = page.getByRole("region", { name: "How a print happens" });
+  await tour.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(
+    tour.getByRole("heading", { name: "Give each nozzle a role" }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBeTruthy();
+});
 test("guided tour advances through six systems and restores the previous view", async ({
   page,
 }) => {

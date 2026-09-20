@@ -115,6 +115,7 @@ export default function App() {
   const [toast, setToast] = useState("");
   const [exporting, setExporting] = useState(false);
   const [tourStep, setTourStep] = useState<number | null>(null);
+  const [printProgress, setPrintProgress] = useState(0);
   const beforeTour = useRef<ViewerState | null>(null);
   const tourTrigger = useRef<HTMLButtonElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -125,6 +126,23 @@ export default function App() {
     [],
   );
   const onReady = useCallback(() => setReady(true), []);
+  const onPrintProgress = useCallback((progress: number) => {
+    setPrintProgress(progress);
+    if (progress === 100)
+      setState((s) =>
+        s.mode === "Print demo" && s.running ? { ...s, running: false } : s,
+      );
+  }, []);
+  function seekPrint(progress: number, running = false) {
+    setPrintProgress(progress);
+    setState((s) => ({
+      ...s,
+      printSeek: progress,
+      printKey: s.printKey + 1,
+      running: running && !s.reducedMotion,
+      explosion: 0,
+    }));
+  }
   const closeTour = useCallback(() => {
     setTourStep(null);
     const saved = beforeTour.current;
@@ -153,6 +171,8 @@ export default function App() {
     setState((s) => ({
       ...s,
       mode: step.mode,
+      printSeek: 0,
+      printKey: s.printKey + 1,
       tourFocus: step.focus,
       selected: null,
       hidden: [],
@@ -223,6 +243,8 @@ export default function App() {
       ...s,
       tourFocus: [],
       mode,
+      printSeek: 0,
+      printKey: s.printKey + 1,
       selected: null,
       isolate: [],
       hidden: [],
@@ -706,6 +728,7 @@ export default function App() {
                     state={state}
                     onSelect={select}
                     onReady={onReady}
+                    onPrintProgress={onPrintProgress}
                   />
                 </Suspense>
               </SceneError>
@@ -936,7 +959,11 @@ export default function App() {
                     aria-label={
                       state.running ? "Pause animation" : "Play animation"
                     }
-                    onClick={() => update({ running: !state.running })}
+                    onClick={() =>
+                      state.mode === "Print demo" && printProgress === 100
+                        ? seekPrint(0, true)
+                        : update({ running: !state.running })
+                    }
                     disabled={state.reducedMotion}
                   >
                     {state.running ? <Pause size={16} /> : <Play size={16} />}
@@ -945,7 +972,9 @@ export default function App() {
                     {state.mode === "Dual nozzle"
                       ? `${state.nozzle} nozzle active`
                       : state.mode === "Print demo"
-                        ? "Layer-by-layer study"
+                        ? printProgress === 100
+                          ? "Print complete"
+                          : "Printing lattice lantern"
                         : "System animation"}
                   </span>
                   <select
@@ -977,6 +1006,43 @@ export default function App() {
                 </div>
               )}
             </div>
+            {state.mode === "Print demo" && (
+              <section
+                className="print-timeline"
+                aria-label="Lattice lantern print progress"
+              >
+                <div className="print-timeline-title">
+                  <strong>Lattice lantern</strong>
+                  <span>128 layers · illustrative toolpath</span>
+                  <output aria-label="Print completion">
+                    {printProgress}%
+                  </output>
+                </div>
+                <div className="print-timeline-controls">
+                  <button
+                    onClick={() => seekPrint(0, true)}
+                    aria-label="Restart print"
+                  >
+                    <RotateCcw size={15} />
+                  </button>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={printProgress}
+                    aria-label="Print progress"
+                    onChange={(e) => seekPrint(Number(e.target.value))}
+                  />
+                  <button
+                    className="print-finish"
+                    onClick={() => seekPrint(100)}
+                  >
+                    Show finished print <ArrowRight size={13} />
+                  </button>
+                </div>
+              </section>
+            )}
             {tourStep !== null && (
               <PrintTour
                 step={tourStep}
@@ -984,7 +1050,10 @@ export default function App() {
                 onClose={closeTour}
               />
             )}
-            <div className="explosion-control" hidden={tourStep !== null}>
+            <div
+              className="explosion-control"
+              hidden={tourStep !== null || state.mode === "Print demo"}
+            >
               <div className="explosion-title">
                 <Layers3 size={17} />
                 <span>Exploded view</span>

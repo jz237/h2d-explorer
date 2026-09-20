@@ -23,6 +23,8 @@ export const views = [
 ] as const;
 export type View = (typeof views)[number];
 export interface ViewerState {
+  printSeek: number;
+  printKey: number;
   tourFocus: string[];
   quality: "Auto" | "Balanced" | "High";
   explosion: number;
@@ -44,6 +46,8 @@ export interface ViewerState {
   reducedMotion: boolean;
 }
 export const initialViewer: ViewerState = {
+  printSeek: 0,
+  printKey: 0,
   tourFocus: [],
   quality: "Auto",
   explosion: 0,

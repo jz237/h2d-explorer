@@ -13,6 +13,73 @@
   --mono: "Space Grotesk", monospace;
   color-scheme: dark;
 }
+.print-timeline {
+  padding: 12px 25px;
+  background: #202a20;
+  border-top: 1px solid #45553b;
+  flex: 0 0 auto;
+}
+.print-timeline-title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 9px;
+}
+.print-timeline-title strong {
+  font: 500 13px var(--mono);
+  color: #d5e9bf;
+}
+.print-timeline-title span {
+  font-size: 9px;
+  color: #98ad8f;
+}
+.print-timeline-title output {
+  margin-left: auto;
+  color: var(--green);
+  font: 14px var(--mono);
+}
+.print-timeline-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.print-timeline-controls input {
+  flex: 1;
+  min-width: 20px;
+  accent-color: var(--green);
+  cursor: pointer;
+}
+.print-timeline-controls button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #c8e0b3;
+  font-size: 10px;
+  min-height: 28px;
+}
+.explosion-control[hidden] {
+  display: none;
+}
+@media (max-width: 700px) {
+  .print-timeline {
+    padding: 9px 15px;
+  }
+  .print-timeline-title {
+    gap: 8px;
+  }
+  .print-timeline-title span {
+    font-size: 8px;
+  }
+  .print-timeline-controls {
+    gap: 8px;
+  }
+  .print-timeline-controls button {
+    font-size: 9px;
+  }
+  .viewer-column.tour-active:has(.print-timeline) .print-tour {
+    max-height: 43%;
+  }
+}
 .start-tour {
   display: inline-flex;
   align-items: center;

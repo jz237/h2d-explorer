@@ -33,6 +33,7 @@ The output is a static `dist/` folder. Relative asset paths allow deployment bel
 - Staged **0–100% explosion**, auto explode, Home, camera reset and seven camera presets.
 - Ten visualization modes: Standard, Exploded, Motion, Filament, Heat map, Airflow, Electronics, Maintenance, Print demo and Dual nozzle.
 - Left/right filament paths, moving XY gantry and Z bed, a growing layer example, and a simplified left-nozzle lift with a model/support-material specimen.
+- **Lattice lantern print demo:** 128 layers build an original fluted pedestal, crossing helical ribs, diamond windows and scalloped crown. The nozzle follows the same paths that reveal the deposited geometry; travel between ribs does not extrude. Scrub any stage, pause, restart or jump to the finished object. The 72-second teaching sequence stops with the head parked clear of the model.
 - Source-linked component information, **40 searchable specifications**, official maintenance filters, a documentation library and a full accuracy statement.
 - X/Y/Z clipping planes, label categories, screen-space label spacing, optional AMS 2 Pro, and GLB export.
 - Responsive assembly drawer and inspector sheet, touch gestures, keyboard controls, focus styles and reduced-motion support.
@@ -68,6 +69,8 @@ src/
   scene/
     models.ts                     Original procedural component geometry
     PrinterScene.tsx              Materials, selections, animation and rendering
+    printPaths.ts                 Lantern layer paths and synchronized nozzle/bed sampling
+    PrintDemo.tsx                  Incrementally revealed deposition geometry
     CameraRig.tsx                 Orbit controls and animated framing
     LabelLayout.tsx               Sparse label collision management
     explosionTransforms.ts        Staged assembly separation
@@ -105,7 +108,7 @@ This is **not official Bambu Lab CAD**, a service disassembly sequence, a therma
 
 The H2D has a shared dual-nozzle carriage. Official maintenance documentation describes the **left nozzle lift**. The animation exaggerates the lift and abstracts its mechanism and timing. It is not an IDEX machine. The X axis uses a linear rail; the Y axis uses rods; the bed has three Z rod/leadscrew sets.
 
-Thermal colors indicate functional zones and published maxima. Airflow paths illustrate purpose, not measured velocities. The print animation is a repeating ring illustration, not G-code playback. The support example is explanatory; it is not a material-specific printing recommendation. The optional AMS housing and feed curves are approximate. Laser/cutting modules and BirdsEye geometry are outside the model scope (the specifications identify the Laser Edition camera separately).
+Thermal colors indicate functional zones and published maxima. Airflow paths illustrate purpose, not measured velocities. The lantern paths, layer thickness and timing are educational, not slicer output or a fabrication-ready G-code file. The color gradient separates features visually and does not simulate filament changes. The support example is explanatory; it is not a material-specific printing recommendation. The optional AMS housing and feed curves are approximate. Laser/cutting modules and BirdsEye geometry are outside the model scope (the specifications identify the Laser Edition camera separately).
 
 ### 3D asset provenance
 
@@ -130,7 +133,7 @@ npm test
 
 Tests launch installed Google Chrome through Playwright against the production preview. They cover all modes, camera presets, clipping controls, part search and sources, isolate/restore, maintenance empty states, specs search, documentation, mobile drawer/sheet behavior, reduced motion, help focus and binary GLB structure/provenance. Screenshots and downloads go to ignored `work/`; failure traces go to ignored `test-results/`. Vite does not watch these directories, avoiding locked download issues on Windows.
 
-The suite now contains 11 browser tests, including all six tour steps, Back / Finish / Escape, focus restoration, exiting to free exploration, the new cover, mobile tour layout and Balanced pixel density. A Chrome emulation check at 390 × 844 with 4× CPU throttling averaged 16.67 ms between animation frames on the development machine. This checks desktop emulation, not a physical phone or mobile GPU.
+The suite contains 13 browser tests and two path validation tests, including all six tour steps, Back / Finish / Escape, focus restoration, exiting to free exploration, the new cover, mobile tour layout, Balanced pixel density, print scrubbing, pause/restart and completion. Path checks cover all 128 layers, bed bounds, continuity, travel moves, and nozzle/deposition alignment. Mobile checks use desktop Chrome emulation, not a physical phone or mobile GPU.
 
 To test a published origin, set `TEST_BASE_URL` to the exhibit URL. The tests use the supplied base URL without launching a local preview.
 

@@ -56,9 +56,9 @@ export const printTour: TourStep[] = [
   {
     label: "Build",
     title: "A shape grows one layer at a time",
-    body: "The nozzle lays down a path of softened material. The build platform changes height as layers accumulate. This ring makes that relationship visible with an exaggerated layer thickness.",
+    body: "The nozzle traces an ornate lattice lantern: a fluted base, crossing spiral ribs and a scalloped crown. The platform lowers as 128 illustrative layers accumulate. Travel moves between ribs do not deposit material.",
     observe:
-      "Watch new rings appear while the bed lowers. This is an illustration, not G-code playback.",
+      "Drag Print progress to inspect the diamond windows or jump to the finished lantern. This is an illustration, not G-code playback.",
     mode: "Print demo",
     focus: [],
     sources: ["product", "maintenance"],
