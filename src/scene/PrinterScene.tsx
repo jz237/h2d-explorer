@@ -16,6 +16,7 @@ import type { ViewerState } from "./types";
 
 const toolIds = new Set([
   "carriage",
+  "tool-cover",
   "extruders",
   "hotend-left",
   "hotend-right",
@@ -31,6 +32,7 @@ const toolIds = new Set([
   "cutter",
 ]);
 export function highlighted(p: Part, s: ViewerState) {
+  if (s.tourFocus.length) return s.tourFocus.includes(p.id);
   switch (s.mode) {
     case "Motion":
       return ["Motion system", "Build platform"].includes(p.category);
@@ -234,6 +236,7 @@ function AssemblyPart({
 }) {
   const group = useRef<THREE.Group>(null);
   const model = useMemo(() => buildPart(part.id), [part.id]);
+  const tubeTravel = useRef(new THREE.Vector2());
   const [hovered, setHovered] = useState(false);
   const { invalidate } = useThree();
   const hidden =
@@ -250,13 +253,23 @@ function AssemblyPart({
   useEffect(() => {
     model.traverse((o) => {
       if (!(o instanceof THREE.Mesh)) return;
-      const mat = o.material as THREE.MeshStandardMaterial;
+      const mat = o.material as THREE.MeshStandardMaterial | THREE.MeshBasicMaterial;
       mat.clippingPlanes = clipping;
-      if (!(mat instanceof THREE.MeshStandardMaterial)) return;
-      const ghost = state.ghost.includes(part.id) || (!emphasis && active);
+      const ghost =
+        state.ghost.includes(part.id) ||
+        (!emphasis && active) ||
+        (part.id === "tool-cover" &&
+          (active ||
+            Boolean(state.selected && state.selected !== "tool-cover")));
       mat.opacity = ghost ? 0.09 : o.userData.baseOpacity;
       mat.transparent = mat.opacity < 1;
       mat.depthWrite = mat.opacity >= 1;
+      mat.needsUpdate = true;
+      if (!(mat instanceof THREE.MeshStandardMaterial)) {
+        mat.transparent = true;
+        mat.depthWrite = false;
+        return;
+      }
       mat.color.copy(o.userData.baseColor);
       mat.emissive.set("#000000");
       mat.emissiveIntensity = 0;
@@ -336,9 +349,40 @@ function AssemblyPart({
       state.reducedMotion ? 1 : 1 - Math.exp(-dt * 9),
     );
     if (group.current.position.distanceTo(dest) > 0.001) invalidate();
+    if (part.id === "ptfe") {
+      const following = demo && state.explosion < 0.02;
+      const x = following ? m.x : 0,
+        z = following ? m.z : 0;
+      const travel = tubeTravel.current;
+      const alpha = state.reducedMotion ? 1 : 1 - Math.exp(-dt * 9);
+      travel.x += (x - travel.x) * alpha;
+      travel.y += (z - travel.y) * alpha;
+      model.traverse((o) => {
+        if (!(o instanceof THREE.Mesh) || o.name !== "flexible-feed-tube")
+          return;
+        const rest = o.userData.restPositions as Float32Array;
+        const attribute = o.geometry.attributes
+          .position as THREE.BufferAttribute;
+        // TubeGeometry emits 41 rings of 8 vertices. Keep the rear end fixed;
+        // smoothly distribute the carriage displacement toward the free end.
+        for (let i = 0; i < attribute.count; i++) {
+          const t = Math.floor(i / 8) / 40;
+          const w = t * t * (3 - 2 * t);
+          attribute.setXYZ(
+            i,
+            rest[i * 3] + travel.x * w,
+            rest[i * 3 + 1],
+            rest[i * 3 + 2] + travel.y * w,
+          );
+        }
+        attribute.needsUpdate = true;
+        o.geometry.computeVertexNormals();
+      });
+      if (Math.abs(x - travel.x) + Math.abs(z - travel.y) > 0.001) invalidate();
+    }
     if (state.running && !state.reducedMotion)
       model.traverse((o) => {
-        if (o.name === "fan-rotor") o.rotation.z += dt * 5;
+        if (o.name === "fan-rotor") o.rotation.z += dt * 5 * state.speed;
       });
   });
   const select = (e: ThreeEvent<MouseEvent>) => {
@@ -383,10 +427,12 @@ function World({
   state,
   onSelect,
   onReady,
+  balanced,
 }: {
   state: ViewerState;
   onSelect: (id: string) => void;
   onReady: () => void;
+  balanced: boolean;
 }) {
   const time = useRef(0);
   const { invalidate, gl } = useThree();
@@ -420,6 +466,10 @@ function World({
   useEffect(() => {
     invalidate();
   }, [state, invalidate]);
+  useEffect(() => {
+    time.current = 0;
+    invalidate();
+  }, [state.mode, invalidate]);
   const modeLabels: Partial<Record<ViewerState["mode"], string[]>> = {
     Standard: ["display", "door", "plate"],
     "Dual nozzle": ["extruders", "hotend-left", "hotend-right", "lift"],
@@ -447,10 +497,11 @@ function World({
       <ambientLight intensity={1.1} />
       <hemisphereLight args={["#f4fff2", "#31443c", 1.6]} />
       <directionalLight
+        key={balanced ? "balanced-shadow" : "high-shadow"}
         position={[7, 12, 8]}
         intensity={3.2}
         castShadow
-        shadow-mapSize={[1024, 1024]}
+        shadow-mapSize={balanced ? [512, 512] : [1024, 1024]}
         shadow-camera-left={-12}
         shadow-camera-right={12}
         shadow-camera-top={14}
@@ -534,11 +585,22 @@ export default function PrinterScene({
   onSelect: (id: string) => void;
   onReady: () => void;
 }) {
+  const [narrow, setNarrow] = useState(
+    () => window.matchMedia("(max-width: 1000px)").matches,
+  );
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 1000px)");
+    const change = () => setNarrow(media.matches);
+    media.addEventListener("change", change);
+    return () => media.removeEventListener("change", change);
+  }, []);
+  const balanced =
+    state.quality === "Balanced" || (state.quality === "Auto" && narrow);
   return (
     <Canvas
       shadows={{ type: THREE.PCFShadowMap }}
       frameloop="demand"
-      dpr={[1, 1.5]}
+      dpr={balanced ? 1 : Math.min(window.devicePixelRatio, 1.5)}
       camera={{ position: [10, 8, 13], fov: 38, near: 0.05, far: 100 }}
       gl={{
         antialias: true,
@@ -555,7 +617,12 @@ export default function PrinterScene({
         </div>
       }
     >
-      <World state={state} onSelect={onSelect} onReady={onReady} />
+      <World
+        state={state}
+        onSelect={onSelect}
+        onReady={onReady}
+        balanced={balanced}
+      />
     </Canvas>
   );
 }

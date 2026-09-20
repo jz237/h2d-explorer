@@ -26,7 +26,10 @@ The output is a static `dist/` folder. Relative asset paths allow deployment bel
 
 ## Explore
 
-- **43 selectable assemblies** in nine categories, with text search, visibility controls, category isolation and ghosting.
+- **44 selectable assemblies** in nine categories, including a smoked toolhead front cover reconstructed from official service photographs, with text search, visibility controls, category isolation and ghosting.
+- A six-step **How a print happens** tour: feed, heat, move, build, switch and cool. Each step frames and highlights its system, supplies official references and lets the visitor advance at their own pace. Finish or Escape restores the prior view; choosing a mode or component leaves the tour to explore freely.
+- Refined toolhead housing, perforated extruder face, inlet collars, nozzle taper, rounded ducts and door handle, plus toothed belt strips. Flexible guide tubes keep their rear ends anchored while their inlet ends follow the moving carriage.
+- Auto / Balanced / High render quality. Auto uses 1× pixel density and 512 px shadows in narrow viewer areas; High allows up to 1.5× and 1024 px shadows. Repeated belt teeth and leadscrew thread rings use instancing to reduce draw calls.
 - Staged **0–100% explosion**, auto explode, Home, camera reset and seven camera presets.
 - Ten visualization modes: Standard, Exploded, Motion, Filament, Heat map, Airflow, Electronics, Maintenance, Print demo and Dual nozzle.
 - Left/right filament paths, moving XY gantry and Z bed, a growing layer example, and a simplified left-nozzle lift with a model/support-material specimen.
@@ -61,6 +64,7 @@ src/
     sources.ts                    Canonical official URLs
     documentation.ts              Library groupings
     systemGuides.ts               Educational mode explanations
+    printTour.ts                  Six source-linked conceptual print stages
   scene/
     models.ts                     Original procedural component geometry
     PrinterScene.tsx              Materials, selections, animation and rendering
@@ -71,6 +75,7 @@ src/
   ui/
     Library.tsx                   Specifications, documents and accuracy pages
     SourceLink.tsx                Consistent links to evidence
+    PrintTour.tsx                 Keyboard-accessible step navigation and notes
 tests/
   explorer.spec.ts                 Production-browser interaction tests
 ```
@@ -124,6 +129,8 @@ npm test
 ```
 
 Tests launch installed Google Chrome through Playwright against the production preview. They cover all modes, camera presets, clipping controls, part search and sources, isolate/restore, maintenance empty states, specs search, documentation, mobile drawer/sheet behavior, reduced motion, help focus and binary GLB structure/provenance. Screenshots and downloads go to ignored `work/`; failure traces go to ignored `test-results/`. Vite does not watch these directories, avoiding locked download issues on Windows.
+
+The suite now contains 11 browser tests, including all six tour steps, Back / Finish / Escape, focus restoration, exiting to free exploration, the new cover, mobile tour layout and Balanced pixel density. A Chrome emulation check at 390 × 844 with 4× CPU throttling averaged 16.67 ms between animation frames on the development machine. This checks desktop emulation, not a physical phone or mobile GPU.
 
 To test a published origin, set `TEST_BASE_URL` to the exhibit URL. The tests use the supplied base URL without launching a local preview.
 

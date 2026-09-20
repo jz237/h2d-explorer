@@ -1,4 +1,9 @@
 export const sources = {
+  ptfe: {
+    title: "PTFE tubes: buffer to both toolhead inlets",
+    url: "https://uk.store.bambulab.com/products/ptfe-tube-on-h2d-printer",
+    kind: "Official replacement part",
+  },
   tds: {
     title: "H2D technical data sheet (PDF)",
     url: "https://store.bblcdn.com/4731f4c55a/e8f62a86f5f24c42a764d3d528303526/TDS.pdf",

@@ -15,6 +15,7 @@ export function SourceLink({
       rel="noreferrer"
       className="source-link"
       title={s.title}
+      aria-label={short ? `Source: ${s.title}` : undefined}
     >
       {short ? "Source" : s.title}
       <ArrowUpRight size={13} />

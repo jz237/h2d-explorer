@@ -13,6 +13,172 @@
   --mono: "Space Grotesk", monospace;
   color-scheme: dark;
 }
+.start-tour {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 9px 12px;
+  border: 1px solid #536846;
+  border-radius: 4px;
+  color: #d0ecba;
+  background: #24311f;
+  font-size: 11px;
+}
+.start-tour {
+  pointer-events: auto;
+}
+.start-tour:hover {
+  background: #35492c;
+}
+.print-tour {
+  flex: 0 0 auto;
+  border-top: 1px solid #48583d;
+  padding: 12px 24px 16px;
+  background: linear-gradient(120deg, #202c1e, #161e19);
+  max-height: 42%;
+  overflow-y: auto;
+}
+.tour-heading-row,
+.tour-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.tour-heading-row .icon-button {
+  width: 28px;
+  height: 28px;
+}
+.tour-steps {
+  display: flex;
+  gap: 4px;
+  margin: 3px 0 12px;
+}
+.tour-steps button {
+  flex: 1;
+  padding: 8px 4px;
+  border-bottom: 2px solid #354330;
+  font-size: 11px;
+  color: #a1b49a;
+  text-align: left;
+}
+.tour-steps button span {
+  font: 9px var(--mono);
+  padding-right: 7px;
+}
+.tour-steps button[aria-current] {
+  border-color: var(--green);
+  color: #d6f0c2;
+}
+.tour-copy h2 {
+  font: 500 21px var(--mono);
+  margin: 0 0 7px;
+  outline: none;
+}
+.tour-copy p {
+  font-size: 12px;
+  color: #bdcbb7;
+  line-height: 1.6;
+  margin: 0 0 6px;
+  max-width: 860px;
+}
+.tour-copy .tour-observe {
+  font-size: 11px;
+  color: #92ae82;
+}
+.tour-bottom-row {
+  margin-top: 12px;
+}
+.tour-sources,
+.tour-navigation {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.tour-navigation .primary-button,
+.tour-navigation .secondary-button {
+  margin: 0;
+  min-width: 88px;
+  padding: 10px;
+}
+.tour-active .scene-area {
+  min-height: 240px;
+}
+.tour-active .explosion-control[hidden] {
+  display: none;
+}
+.tour-active .scene-heading {
+  top: 17px;
+}
+.tour-active .scene-heading p,
+.tour-active .orbit-hint,
+.tour-active .mode-note {
+  display: none;
+}
+.tour-active .scene-left-tools {
+  top: 115px;
+}
+.tour-active .animation-bar {
+  bottom: 14px;
+}
+.quality-help {
+  display: block;
+  margin: 4px 0 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+@media (max-width: 700px) {
+  .start-tour {
+    margin-top: 7px;
+    padding: 7px 9px;
+  }
+  .print-tour {
+    padding: 8px 15px 12px;
+    max-height: 43%;
+  }
+  .tour-copy h2 {
+    font-size: 18px;
+  }
+  .tour-copy p {
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .tour-steps {
+    margin-bottom: 9px;
+  }
+  .tour-steps button {
+    text-align: center;
+    padding: 7px 1px;
+    font-size: 10px;
+    min-height: 36px;
+  }
+  .tour-steps button span {
+    display: none;
+  }
+  .tour-active .scene-area {
+    min-height: 280px;
+  }
+  .tour-active .scene-heading h1 {
+    font-size: 24px;
+  }
+  .tour-active .scene-left-tools {
+    top: 98px;
+  }
+  .tour-active .scene-left-tools .icon-button {
+    height: 30px;
+    width: 30px;
+  }
+  .tour-active .view-selector {
+    display: none;
+  }
+  .tour-active .animation-bar {
+    left: 50%;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: calc(100% - 24px);
+  }
+}
 * {
   box-sizing: border-box;
 }
@@ -1602,8 +1768,15 @@ select {
 .workspace {
   flex: 0 0 auto;
 }
-.explosion-range > div > button { padding: 0; font: inherit; letter-spacing: inherit; color: inherit; }
-.explosion-range > div > button:hover { color: var(--green); }
+.explosion-range > div > button {
+  padding: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+}
+.explosion-range > div > button:hover {
+  color: var(--green);
+}
 .system-guide {
   border: 1px solid #48593b;
   border-radius: 5px;

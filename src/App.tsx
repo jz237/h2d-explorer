@@ -55,6 +55,8 @@ import {
 } from "./scene/types";
 import { Library } from "./ui/Library";
 import { SourceLink } from "./ui/SourceLink";
+import { PrintTour } from "./ui/PrintTour";
+import { printTour } from "./data/printTour";
 import "./style.css";
 const PrinterScene = lazy(() => import("./scene/PrinterScene"));
 const modeIcons = [
@@ -112,6 +114,9 @@ export default function App() {
   const [frequency, setFrequency] = useState("All");
   const [toast, setToast] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [tourStep, setTourStep] = useState<number | null>(null);
+  const beforeTour = useRef<ViewerState | null>(null);
+  const tourTrigger = useRef<HTMLButtonElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const viewerRef = useRef<HTMLElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -120,9 +125,61 @@ export default function App() {
     [],
   );
   const onReady = useCallback(() => setReady(true), []);
-  const select = useCallback((id: string) => {
+  const closeTour = useCallback(() => {
+    setTourStep(null);
+    const saved = beforeTour.current;
+    if (saved)
+      setState((s) => ({
+        ...saved,
+        reducedMotion: s.reducedMotion,
+        quality: s.quality,
+        running: saved.running && !s.reducedMotion,
+        cameraKey: s.cameraKey + 1,
+      }));
+    beforeTour.current = null;
+    requestAnimationFrame(() => tourTrigger.current?.focus());
+  }, []);
+  function startTour() {
+    beforeTour.current = state;
+    setAuto(false);
+    setSettings(false);
+    setTreeOpen(false);
+    setInspectorOpen(false);
+    setTourStep(0);
+  }
+  useEffect(() => {
+    if (tourStep === null) return;
+    const step = printTour[tourStep];
     setState((s) => ({
       ...s,
+      mode: step.mode,
+      tourFocus: step.focus,
+      selected: null,
+      hidden: [],
+      ghost: [],
+      isolate: [],
+      section: "Off",
+      explosion: 0,
+      labels: true,
+      labelCategory: "All",
+      speed: 1,
+      nozzle: "Left",
+      showAMS: tourStep === 0,
+      running:
+        !s.reducedMotion &&
+        ["Filament", "Motion", "Print demo", "Dual nozzle", "Airflow"].includes(
+          step.mode,
+        ),
+      view: step.view ?? "Perspective",
+      cameraKey: s.cameraKey + 1,
+    }));
+  }, [tourStep]);
+  const select = useCallback((id: string) => {
+    setTourStep(null);
+    beforeTour.current = null;
+    setState((s) => ({
+      ...s,
+      tourFocus: [],
       selected: id,
       running: false,
       ghost:
@@ -142,10 +199,13 @@ export default function App() {
     setTreeOpen(false);
   }, []);
   function home() {
+    setTourStep(null);
+    beforeTour.current = null;
     setAuto(false);
     setState((s) => ({
       ...initialViewer,
       reducedMotion: s.reducedMotion,
+      quality: s.quality,
       cameraKey: s.cameraKey + 1,
     }));
     setSearch("");
@@ -155,10 +215,13 @@ export default function App() {
     setSettings(false);
   }
   const chooseMode = useCallback((mode: Mode) => {
+    setTourStep(null);
+    beforeTour.current = null;
     setAuto(false);
     setRelatedOnly(false);
     setState((s) => ({
       ...s,
+      tourFocus: [],
       mode,
       selected: null,
       isolate: [],
@@ -233,6 +296,10 @@ export default function App() {
       if (e.key.toLowerCase() === "e") chooseMode("Exploded");
       if (e.key.toLowerCase() === "h") home();
       if (e.key === "Escape") {
+        if (beforeTour.current) {
+          closeTour();
+          return;
+        }
         update({ selected: null, isolate: [], ghost: [] });
         setInspectorOpen(false);
       }
@@ -240,7 +307,7 @@ export default function App() {
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [chooseMode, update]);
+  }, [chooseMode, update, closeTour]);
   async function exportGLB() {
     setExporting(true);
     try {
@@ -576,7 +643,9 @@ export default function App() {
             </button>
           </aside>
           <section
-            className="viewer-column"
+            className={
+              "viewer-column " + (tourStep !== null ? "tour-active" : "")
+            }
             ref={viewerRef}
             aria-label="Interactive 3D workspace"
           >
@@ -590,6 +659,16 @@ export default function App() {
                   Bambu Lab <span>H2D</span>
                 </h1>
                 <p>A closer look. A deeper understanding.</p>
+                {tourStep === null && (
+                  <button
+                    ref={tourTrigger}
+                    className="start-tour"
+                    onClick={startTour}
+                  >
+                    <Play size={13} /> How a print happens{" "}
+                    <ArrowRight size={14} />
+                  </button>
+                )}
               </div>
               <div className="scene-top-right">
                 <span className="live-badge">INTERACTIVE 3D</span>
@@ -698,6 +777,26 @@ export default function App() {
                       <X size={15} />
                     </button>
                   </div>
+                  <label>
+                    Render quality
+                    <select
+                      aria-label="Render quality"
+                      value={state.quality}
+                      onChange={(e) =>
+                        update({
+                          quality: e.target.value as ViewerState["quality"],
+                        })
+                      }
+                    >
+                      <option>Auto</option>
+                      <option>Balanced</option>
+                      <option>High</option>
+                    </select>
+                  </label>
+                  <small className="quality-help">
+                    Auto uses Balanced on small screens. Balanced reduces pixel
+                    density and shadows.
+                  </small>
                   <label>
                     Section plane
                     <select
@@ -878,7 +977,14 @@ export default function App() {
                 </div>
               )}
             </div>
-            <div className="explosion-control">
+            {tourStep !== null && (
+              <PrintTour
+                step={tourStep}
+                onStep={setTourStep}
+                onClose={closeTour}
+              />
+            )}
+            <div className="explosion-control" hidden={tourStep !== null}>
               <div className="explosion-title">
                 <Layers3 size={17} />
                 <span>Exploded view</span>
@@ -910,7 +1016,9 @@ export default function App() {
                 />
                 <div>
                   <button onClick={home}>ASSEMBLED</button>
-                  <button onClick={() => chooseMode("Exploded")}>FULLY EXPLODED</button>
+                  <button onClick={() => chooseMode("Exploded")}>
+                    FULLY EXPLODED
+                  </button>
                 </div>
               </div>
               <button
@@ -1222,14 +1330,16 @@ export default function App() {
               REFERENCE-BASED RECONSTRUCTION
             </div>
           </aside>
-          <button
-            className="mobile-info"
-            onClick={() => setInspectorOpen(true)}
-          >
-            <Box size={16} />
-            {selected ? selected.name : "Machine overview"}
-            <ChevronRight size={15} />
-          </button>
+          {tourStep === null && (
+            <button
+              className="mobile-info"
+              onClick={() => setInspectorOpen(true)}
+            >
+              <Box size={16} />
+              {selected ? selected.name : "Machine overview"}
+              <ChevronRight size={15} />
+            </button>
+          )}
         </main>
       )}
       <footer className="statusbar">

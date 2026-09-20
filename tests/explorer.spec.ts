@@ -1,5 +1,112 @@
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
+test("guided tour advances through six systems and restores the previous view", async ({
+  page,
+}) => {
+  await page.goto("./");
+  await page
+    .getByRole("toolbar")
+    .getByRole("button", { name: "Exploded", exact: true })
+    .click();
+  await page.getByRole("button", { name: "How a print happens" }).click();
+  const tour = page.getByRole("region", { name: "How a print happens" });
+  const titles = [
+    "Follow the filament",
+    "Turn filament into a melt",
+    "Two axes guide one toolhead",
+    "A shape grows one layer at a time",
+    "Give each nozzle a role",
+    "Manage heat around the print",
+  ];
+  for (let i = 0; i < titles.length; i++) {
+    await expect(tour.getByRole("heading", { name: titles[i] })).toBeFocused();
+    await expect(tour.locator('[aria-current="step"]')).toHaveCount(1);
+    expect(await tour.getByRole("link").count()).toBeGreaterThan(0);
+    if (i < titles.length - 1)
+      await tour.getByRole("button", { name: "Next", exact: true }).click();
+  }
+  await tour.getByRole("button", { name: "Back", exact: true }).click();
+  await expect(tour.getByRole("heading", { name: titles[4] })).toBeVisible();
+  await tour.getByRole("button", { name: "06Cool" }).click();
+  await tour.getByRole("button", { name: "Finish tour" }).click();
+  await expect(tour).toHaveCount(0);
+  await expect(
+    page.getByRole("slider", { name: "Explosion percentage" }),
+  ).toHaveValue("100");
+  await expect(
+    page.getByRole("button", { name: "How a print happens" }),
+  ).toBeFocused();
+});
+
+test("mobile tour remains readable with reduced motion and quality controls", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("./");
+  await page.getByRole("button", { name: "How a print happens" }).click();
+  const tour = page.getByRole("region", { name: "How a print happens" });
+  await expect(
+    page.getByRole("button", { name: "Play animation" }),
+  ).toBeDisabled();
+  await tour.getByRole("button", { name: "Move", exact: true }).click();
+  await expect(
+    tour.getByRole("heading", { name: "Two axes guide one toolhead" }),
+  ).toBeVisible();
+  const canvasBox = await page.locator("canvas").boundingBox();
+  expect(canvasBox!.height).toBeGreaterThanOrEqual(240);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBeTruthy();
+  await page.screenshot({ path: "work/tour-mobile.png" });
+  await page.keyboard.press("Escape");
+  await expect(tour).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Viewer settings and cross-section" })
+    .click();
+  await page
+    .getByRole("combobox", { name: "Render quality" })
+    .selectOption("Balanced");
+  await expect(
+    page.getByRole("combobox", { name: "Render quality" }),
+  ).toHaveValue("Balanced");
+  await expect
+    .poll(() =>
+      page
+        .locator("canvas")
+        .evaluate(
+          (canvas) =>
+            (canvas as HTMLCanvasElement).width /
+            canvas.getBoundingClientRect().width,
+        ),
+    )
+    .toBeCloseTo(1, 1);
+});
+
+test("switching modes leaves the tour and the new cover is selectable", async ({
+  page,
+}) => {
+  await page.goto("./");
+  await page.getByRole("button", { name: "How a print happens" }).click();
+  await page
+    .getByRole("toolbar")
+    .getByRole("button", { name: "Standard", exact: true })
+    .click();
+  await expect(
+    page.getByRole("region", { name: "How a print happens" }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("textbox", { name: "Search components" })
+    .fill("front cover");
+  await page
+    .getByRole("button", { name: "Toolhead front cover", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Toolhead front cover" }),
+  ).toBeVisible();
+});
 test.beforeEach(async ({ page }) => {
   await page.goto("./");
   await expect(page.locator("canvas")).toBeVisible();

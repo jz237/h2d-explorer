@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { parts, type Vec3 } from "../data/components";
 
 // Original parametric reconstruction. Coordinates use 100 mm per scene unit.
@@ -64,6 +65,57 @@ function cyl(
   m.castShadow = true;
   g.add(m);
   return m;
+}
+function rounded(
+  g: THREE.Group,
+  size: Vec3,
+  pos: Vec3,
+  color: string,
+  radius = 0.04,
+  opacity = 1,
+) {
+  const mesh = new THREE.Mesh(
+    new RoundedBoxGeometry(...size, 2, radius),
+    material(color, 0.45, 0.38, opacity),
+  );
+  mesh.position.set(...pos);
+  mesh.castShadow = opacity === 1;
+  mesh.receiveShadow = true;
+  g.add(mesh);
+  return mesh;
+}
+
+// Holes are real geometry, not decals; dimensions remain illustrative.
+function extruderFace(g: THREE.Group) {
+  const shape = new THREE.Shape();
+  shape.moveTo(-0.57, -0.35);
+  shape.lineTo(0.57, -0.35);
+  shape.lineTo(0.64, 0.28);
+  shape.quadraticCurveTo(0.62, 0.4, 0.5, 0.34);
+  shape.lineTo(0.33, 0.25);
+  shape.quadraticCurveTo(0, 0.44, -0.33, 0.25);
+  shape.lineTo(-0.5, 0.34);
+  shape.quadraticCurveTo(-0.62, 0.4, -0.64, 0.28);
+  shape.closePath();
+  for (const x of [-0.29, 0.29]) {
+    const hole = new THREE.Path();
+    hole.absellipse(x, 0.04, 0.13, 0.18, 0, Math.PI * 2, true, 0);
+    shape.holes.push(hole);
+  }
+  const mesh = new THREE.Mesh(
+    new THREE.ExtrudeGeometry(shape, {
+      depth: 0.025,
+      bevelEnabled: true,
+      bevelThickness: 0.008,
+      bevelSize: 0.008,
+      bevelSegments: 1,
+      steps: 1,
+      curveSegments: 10,
+    }),
+    material("#555d5a", 0.8),
+  );
+  mesh.position.z = 0.34;
+  g.add(mesh);
 }
 function tube(g: THREE.Group, points: Vec3[], radius: number, color: string) {
   const curve = new THREE.CatmullRomCurve3(
@@ -184,7 +236,9 @@ export function buildPart(id: string): THREE.Group {
         box(g, [0.12, 4.89, 0.12], [x, -0.02, 0], palette.black);
       for (const y of [-2.46, 2.42])
         box(g, [4.45, 0.14, 0.12], [0, y, 0], palette.black);
-      box(g, [0.1, 1.18, 0.17], [1.93, 0.1, 0.13], "#8c9591");
+      rounded(g, [0.14, 1.18, 0.19], [1.93, 0.1, 0.16], "#8c9591");
+      for (const y of [-0.43, 0.63])
+        box(g, [0.1, 0.08, 0.19], [1.93, y, 0.08], palette.black);
       for (const y of [-1.7, 1.7])
         box(g, [0.15, 0.36, 0.13], [-2.24, y, -0.04]);
       break;
@@ -235,6 +289,20 @@ export function buildPart(id: string): THREE.Group {
       box(g, [4.15, 0.21, 0.24], [0, 0, 0], palette.black);
       box(g, [4.03, 0.13, 0.07], [0, 0, 0.157], palette.metal, 0.9);
       for (let i = 0; i < 14; i++) screw(g, [-1.93 + i * 0.295, 0, 0.2]);
+      for (const y of [-0.19, 0.19]) {
+        box(g, [4.03, 0.08, 0.025], [0, y, 0.13], palette.black);
+        const teeth = new THREE.InstancedMesh(
+          new THREE.BoxGeometry(0.016, 0.08, 0.014),
+          material("#49504c"),
+          100,
+        );
+        const matrix = new THREE.Matrix4();
+        for (let i = 0; i < 100; i++) {
+          matrix.makeTranslation(-1.98 + i * 0.04, y, 0.15);
+          teeth.setMatrixAt(i, matrix);
+        }
+        g.add(teeth);
+      }
       break;
     case "y-rods":
       for (const x of [-2.02, 2.02]) {
@@ -261,17 +329,43 @@ export function buildPart(id: string): THREE.Group {
       }
       break;
     case "carriage":
-      box(g, [1.36, 0.46, 0.31], [0, 0, 0], palette.metal);
+      rounded(g, [1.36, 0.46, 0.31], [0, 0, 0], palette.metal);
       box(g, [0.63, 0.3, 0.11], [0, 0, -0.2], palette.black);
       for (const x of [-0.55, 0.55]) screw(g, [x, 0.12, 0.17]);
       break;
+    case "tool-cover": {
+      rounded(g, [1.34, 0.9, 0.055], [0, -0.04, 0.27], "#28342e", 0.05, 0.72);
+      for (const x of [-0.7, 0.7]) {
+        rounded(g, [0.11, 1.05, 0.66], [x, 0.01, -0.12], palette.shell, 0.04);
+        const brace = rounded(
+          g,
+          [0.1, 0.66, 0.11],
+          [x * 0.87, 0.04, 0.24],
+          palette.metal,
+          0.03,
+        );
+        brace.rotation.z = x < 0 ? -0.25 : 0.25;
+      }
+      rounded(g, [1.48, 0.1, 0.73], [0, 0.5, -0.17], palette.shell);
+      for (const x of [-0.47, 0, 0.47])
+        box(g, [0.035, 0.012, 0.44], [x, 0.554, -0.19], palette.black);
+      rounded(g, [1.35, 0.14, 0.25], [0, -0.52, 0.16], palette.black);
+      decal(g, "Bambu Lab", [0, -0.33, 0.308], 0.83);
+      for (const x of [-0.24, 0.24])
+        decal(g, x < 0 ? "L" : "R", [x, -0.52, 0.294], 0.11);
+      break;
+    }
     case "extruders":
-      box(g, [1.25, 0.67, 0.48], [0, 0, 0], palette.black);
+      rounded(g, [1.25, 0.67, 0.48], [0, 0, 0], palette.black);
       for (const x of [-0.29, 0.29]) {
         cyl(g, 0.19, 0.1, [x, 0.03, 0.28], palette.metal, "z");
         cyl(g, 0.12, 0.13, [x, 0.03, 0.33], palette.copper, "z");
-        box(g, [0.11, 0.29, 0.13], [x, 0.42, 0], palette.black);
+        cyl(g, 0.094, 0.09, [x, 0.37, 0], "#dfdec3");
+        cyl(g, 0.068, 0.17, [x, 0.46, 0], palette.black);
+        for (const y of [-0.29, 0.28]) screw(g, [x * 1.85, y, 0.39]);
       }
+      extruderFace(g);
+      cyl(g, 0.08, 0.04, [0, -0.11, 0.39], palette.metal, "z");
       break;
     case "hotend-left":
     case "hotend-right": {
@@ -285,8 +379,8 @@ export function buildPart(id: string): THREE.Group {
           0.85,
         );
       cyl(g, 0.045, 0.17, [0, -0.09, 0]);
-      box(g, [0.25, 0.15, 0.23], [0, -0.2, 0], palette.black);
-      cyl(g, 0.026, 0.092, [0, -0.319, 0], palette.metal, "y", 0.08);
+      rounded(g, [0.25, 0.15, 0.23], [0, -0.2, 0], palette.black, 0.025);
+      cyl(g, 0.08, 0.092, [0, -0.319, 0], palette.metal, "y", 0.026);
       break;
     }
     case "lift":
@@ -314,8 +408,16 @@ export function buildPart(id: string): THREE.Group {
       break;
     case "ducts":
       for (const x of [-0.48, 0.48]) {
-        box(g, [0.19, 0.45, 0.3], [x, 0.1, 0], palette.black);
-        box(g, [0.42, 0.11, 0.23], [x * 0.7, -0.13, 0.02], palette.black);
+        rounded(g, [0.19, 0.45, 0.3], [x, 0.1, 0], palette.black);
+        const outlet = rounded(
+          g,
+          [0.42, 0.13, 0.23],
+          [x * 0.7, -0.13, 0.02],
+          palette.black,
+          0.035,
+        );
+        outlet.rotation.z = x < 0 ? 0.2 : -0.2;
+        box(g, [0.29, 0.045, 0.014], [x * 0.7, -0.13, 0.144], "#060b09");
       }
       break;
     case "bed":
@@ -344,8 +446,18 @@ export function buildPart(id: string): THREE.Group {
       ]) {
         cyl(g, 0.059, 4.75, [x, 0, z]);
         cyl(g, 0.052, 4.7, [x + 0.17, 0, z], "#6f7771");
-        for (let i = 0; i < 50; i++)
-          cyl(g, 0.063, 0.018, [x + 0.17, -2.3 + i * 0.093, z], "#949c98");
+        const threads = new THREE.InstancedMesh(
+          new THREE.CylinderGeometry(0.063, 0.063, 0.018, 12),
+          material("#949c98", 0.72, 0.3),
+          50,
+        );
+        const matrix = new THREE.Matrix4();
+        for (let i = 0; i < 50; i++) {
+          matrix.makeTranslation(x + 0.17, -2.3 + i * 0.093, z);
+          threads.setMatrixAt(i, matrix);
+        }
+        threads.castShadow = true;
+        g.add(threads);
         box(g, [0.38, 0.2, 0.3], [x, -2.35, z]);
       }
       break;
@@ -360,19 +472,28 @@ export function buildPart(id: string): THREE.Group {
       }
       break;
     case "ptfe":
-      for (const x of [-0.24, 0.24])
-        tube(
+      for (const x of [-0.29, 0.29]) {
+        const mesh = tube(
           g,
           [
-            [x + 1, 0.3, -2.25],
-            [x + 1.2, 0.66, -1.5],
-            [x + 0.4, 0.66, -0.3],
-            [x, 0.1, 0.45],
-            [x, -0.29, 0.53],
+            [1.2 + x * 0.5, -0.4, -2.65],
+            [1.2 + x, 0.5, -1.7],
+            [x + 0.4, 0.7, -0.3],
+            [x, 0.12, 0.52],
+            [x, -0.22, 0.52],
           ],
           0.038,
           "#c6d4cf",
         );
+        mesh.name = "flexible-feed-tube";
+        mesh.userData.restPositions = Float32Array.from(
+          mesh.geometry.attributes.position.array,
+        );
+        (mesh.geometry.attributes.position as THREE.BufferAttribute).setUsage(
+          THREE.DynamicDrawUsage,
+        );
+        mesh.frustumCulled = false;
+      }
       break;
     case "ams": {
       box(g, [4.55, 0.35, 2.7], [0, -0.65, 0], palette.frame);

@@ -208,6 +208,15 @@ export const parts: Part[] = [
     },
   ),
   p(
+    "tool-cover",
+    "Toolhead front cover",
+    "Dual toolhead",
+    [0, 4.6, 0.98],
+    [0, 1.3, 4.6],
+    "Removable smoked front cover and surrounding toolhead housing. The silhouette follows official service photographs; openings, wall thickness and dimensions remain approximate. Internal system modes ghost the cover for visibility.",
+    { sources: ["extruder"], related: ["extruders", "tool-fans", "cutter"] },
+  ),
+  p(
     "extruders",
     "Dual extruder unit",
     "Dual toolhead",
@@ -373,7 +382,7 @@ export const parts: Part[] = [
     [0, 2.4, 1.5],
     "Guide tubes bring filament to each extrusion path. Their curves and routing are illustrative and change with the moving carriage.",
     {
-      sources: ["maintenance", "extruder"],
+      sources: ["ptfe", "maintenance", "extruder"],
       specs: ["filament"],
       related: ["ams", "extruders", "filament-sensor"],
     },

@@ -43,6 +43,23 @@ export function CameraRig({ state }: { state: ViewerState }) {
           ),
         );
     }
+    if (state.tourFocus.length && !state.selected) {
+      const points = state.tourFocus.map(
+        (id) => new Vector3(...byId[id].position),
+      );
+      const min = points[0].clone(),
+        max = points[0].clone();
+      points.forEach((p) => {
+        min.min(p);
+        max.max(p);
+      });
+      target = min.clone().add(max).multiplyScalar(0.5);
+      const extent = Math.max(max.x - min.x, max.y - min.y, max.z - min.z);
+      // Leave room for the physical size of each reconstructed assembly.
+      const distance =
+        Math.max(1, extent * 0.28 + 0.6) * (size.width < 500 ? 1.25 : 1);
+      eye = target.clone().add(new Vector3(4, 2.3, 7).multiplyScalar(distance));
+    }
     goal.current = { eye, target };
     invalidate();
     // Explosion framing is intentional only when the camera action changes, so sliders never fight user orbit.

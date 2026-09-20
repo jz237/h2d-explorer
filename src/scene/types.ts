@@ -23,6 +23,8 @@ export const views = [
 ] as const;
 export type View = (typeof views)[number];
 export interface ViewerState {
+  tourFocus: string[];
+  quality: "Auto" | "Balanced" | "High";
   explosion: number;
   mode: Mode;
   selected: string | null;
@@ -42,6 +44,8 @@ export interface ViewerState {
   reducedMotion: boolean;
 }
 export const initialViewer: ViewerState = {
+  tourFocus: [],
+  quality: "Auto",
   explosion: 0,
   mode: "Standard",
   selected: null,
