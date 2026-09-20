@@ -552,7 +552,7 @@ export default function App() {
                 parts.filter(
                   (p) =>
                     !state.hidden.includes(p.id) &&
-                    (state.showAMS || p.id !== "ams" || search.trim()) &&
+                    (state.showAMS || p.id !== "ams") &&
                     (!state.isolate.length || state.isolate.includes(p.id)),
                 ).length
               }{" "}
