@@ -580,6 +580,13 @@ export default function PrinterScene({
   onReady: () => void;
   onPrintProgress: (progress: number) => void;
 }) {
+  // R3F also dispatches clicks after an orbit drag ends over a mesh. Track the
+  // entire gesture (including out-and-back drags and pinch zoom), not just the
+  // distance between pointerdown and click. Keep suppression until a new press.
+  const gesture = useRef({
+    pointers: new Map<number, { x: number; y: number }>(),
+    moved: false,
+  });
   const [narrow, setNarrow] = useState(
     () => window.matchMedia("(max-width: 1000px)").matches,
   );
@@ -593,6 +600,37 @@ export default function PrinterScene({
     state.quality === "Balanced" || (state.quality === "Auto" && narrow);
   return (
     <Canvas
+      onPointerDownCapture={(event) => {
+        const current = gesture.current;
+        if (current.pointers.size === 0) current.moved = false;
+        current.pointers.set(event.pointerId, {
+          x: event.clientX,
+          y: event.clientY,
+        });
+        if (current.pointers.size > 1) current.moved = true;
+      }}
+      onPointerMoveCapture={(event) => {
+        const current = gesture.current;
+        const start = current.pointers.get(event.pointerId);
+        if (
+          start &&
+          Math.hypot(event.clientX - start.x, event.clientY - start.y) > 4
+        )
+          current.moved = true;
+      }}
+      onPointerUpCapture={(event) => {
+        gesture.current.pointers.delete(event.pointerId);
+      }}
+      onPointerCancelCapture={(event) => {
+        gesture.current.pointers.delete(event.pointerId);
+        gesture.current.moved = true;
+      }}
+      onLostPointerCapture={(event) => {
+        gesture.current.pointers.delete(event.pointerId);
+      }}
+      onWheelCapture={() => {
+        gesture.current.moved = true;
+      }}
       shadows={{ type: THREE.PCFShadowMap }}
       frameloop="demand"
       dpr={balanced ? 1 : Math.min(window.devicePixelRatio, 1.5)}
@@ -614,7 +652,9 @@ export default function PrinterScene({
     >
       <World
         state={state}
-        onSelect={onSelect}
+        onSelect={(id) => {
+          if (!gesture.current.moved) onSelect(id);
+        }}
         onReady={onReady}
         balanced={balanced}
         onPrintProgress={onPrintProgress}

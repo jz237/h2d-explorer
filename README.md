@@ -138,7 +138,7 @@ npm test
 
 Tests launch installed Google Chrome through Playwright against the production preview. They cover all modes, camera presets, clipping controls, part search and sources, isolate/restore, maintenance empty states, specs search, documentation, mobile drawer/sheet behavior, reduced motion, help focus and binary GLB structure/provenance. Screenshots and downloads go to ignored `work/`; failure traces go to ignored `test-results/`. Vite does not watch these directories, avoiding locked download issues on Windows.
 
-The suite contains 16 browser tests and three path validation tests, including all six tour steps, Back / Finish / Escape, focus restoration, mobile layout, rendering quality, gallery selection, layer visibility, print cameras, scrubbing, restart and completion. Path checks cover every study's layers, bed bounds, continuity, feature counts, travel moves and nozzle/deposition alignment. Mobile checks use desktop Chrome emulation, not a physical phone or mobile GPU.
+The suite contains 18 browser tests and three path validation tests, including all six tour steps, Back / Finish / Escape, focus restoration, mobile layout, rendering quality, gallery selection, layer visibility, print cameras, scrubbing, restart and completion. Navigation checks verify uninterrupted printing during orbit, pan, wheel zoom, touch drag and pinch, while intentional part clicks remain selectable. Path checks cover every study's layers, bed bounds, continuity, feature counts, travel moves and nozzle/deposition alignment. Mobile checks use desktop Chrome emulation, not a physical phone or mobile GPU.
 
 To test a published origin, set `TEST_BASE_URL` to the exhibit URL. The tests use the supplied base URL without launching a local preview.
 
