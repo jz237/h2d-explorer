@@ -1,4 +1,5 @@
 import type { Category } from "../data/components";
+import type { PrintModel, PrintKind, PrintCamera } from "../data/printGallery";
 export const modes = [
   "Standard",
   "Exploded",
@@ -23,6 +24,9 @@ export const views = [
 ] as const;
 export type View = (typeof views)[number];
 export interface ViewerState {
+  printModel: PrintModel;
+  printLayers: PrintKind[];
+  printCamera: PrintCamera;
   printSeek: number;
   printKey: number;
   tourFocus: string[];
@@ -46,6 +50,9 @@ export interface ViewerState {
   reducedMotion: boolean;
 }
 export const initialViewer: ViewerState = {
+  printModel: "lantern",
+  printLayers: ["walls", "infill", "supports"],
+  printCamera: "Overview",
   printSeek: 0,
   printKey: 0,
   tourFocus: [],

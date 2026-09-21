@@ -13,6 +13,192 @@
   --mono: "Space Grotesk", monospace;
   color-scheme: dark;
 }
+.print-controls {
+  position: relative;
+  z-index: 24;
+}
+.print-inspection .animation-bar {
+  display: none;
+}
+.print-inspection .scene-left-tools > button[aria-label="Toggle labels"],
+.print-inspection
+  .scene-left-tools
+  > button[aria-label="Viewer settings and cross-section"] {
+  display: none;
+}
+.print-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+.print-tools > button,
+.print-tools select {
+  border: 1px solid #4b5e43;
+  background: #18231a;
+  color: #c8dfb6;
+  padding: 7px 9px;
+  border-radius: 4px;
+  font-size: 10px;
+  min-height: 32px;
+}
+.print-tools > button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.print-tools > button.selected {
+  border-color: #b4e78d;
+  background: #34472b;
+}
+.print-tools select {
+  margin-left: auto;
+  max-width: 190px;
+}
+.gallery-count {
+  padding: 1px 4px;
+  background: #374c2c;
+  border-radius: 3px;
+}
+.print-options {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 12px;
+  right: 12px;
+  background: #1a251d;
+  border: 1px solid #688159;
+  border-radius: 8px;
+  padding: 17px;
+  box-shadow: 0 14px 45px #0009;
+  max-height: min(420px, 60dvh);
+  overflow-y: auto;
+}
+.print-options-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.print-options-heading strong {
+  font: 500 16px var(--mono);
+  color: #d5e8c4;
+}
+.print-options-heading button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+}
+.print-options p {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #a5b69b;
+  margin: 12px 0 0;
+}
+.print-gallery {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.print-gallery button {
+  text-align: left;
+  padding: 10px;
+  border: 1px solid #40523b;
+  border-radius: 5px;
+  background: #141d17;
+  transition: background 0.15s;
+}
+.print-gallery button:hover {
+  background: #2b3a25;
+}
+.print-gallery button[aria-pressed="true"] {
+  border-color: var(--print-accent);
+  background: #2a3726;
+}
+.print-gallery svg {
+  width: 100%;
+  height: 80px;
+  color: var(--print-accent);
+}
+.print-gallery strong {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #dce9d2;
+}
+.print-gallery strong svg {
+  height: 12px;
+  width: 12px;
+}
+.print-gallery small {
+  display: block;
+  font-size: 9px;
+  color: #9fad96;
+  margin-top: 6px;
+}
+.print-layer-options {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.print-layer-options label {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  border: 1px solid #43543c;
+  padding: 12px 9px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.print-layer-options input {
+  accent-color: #b4e78d;
+  margin: 0;
+}
+.print-layer-options i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--kind-color);
+}
+.print-options .empty-print-note {
+  color: #edc491;
+}
+@media (max-width: 700px) {
+  .print-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .print-gallery svg {
+    height: 56px;
+  }
+  .print-options {
+    padding: 12px;
+  }
+  .print-options-heading strong {
+    font-size: 14px;
+  }
+  .print-layer-options {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .print-tools {
+    gap: 5px;
+  }
+  .print-tools > button,
+  .print-tools select {
+    padding: 5px;
+    font-size: 9px;
+  }
+  .print-tools select {
+    width: 142px;
+  }
+  .print-tools .gallery-count {
+    display: none;
+  }
+  .viewer-column.tour-active:has(.print-controls) .scene-area {
+    min-height: 240px;
+  }
+}
 .print-timeline {
   padding: 12px 25px;
   background: #202a20;

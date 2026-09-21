@@ -56,9 +56,9 @@ export const printTour: TourStep[] = [
   {
     label: "Build",
     title: "A shape grows one layer at a time",
-    body: "The nozzle traces an ornate lattice lantern: a fluted base, crossing spiral ribs and a scalloped crown. The platform lowers as 128 illustrative layers accumulate. Travel moves between ribs do not deposit material.",
+    body: "Choose a lantern, castle, gear assembly or vase from the print gallery. The platform lowers as layers accumulate. Hide the walls to reveal infill, or follow the nozzle as it deposits each path.",
     observe:
-      "Drag Print progress to inspect the diamond windows or jump to the finished lantern. This is an illustration, not G-code playback.",
+      "Try the castle for supports beneath an arch. Travel moves do not extrude. These studies are illustrations, not G-code playback.",
     mode: "Print demo",
     focus: [],
     sources: ["product", "maintenance"],

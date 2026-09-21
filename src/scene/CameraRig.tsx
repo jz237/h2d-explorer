@@ -6,7 +6,14 @@ import type { OrbitControls as OrbitImpl } from "three-stdlib";
 import { byId } from "../data/components";
 import { explodedPosition } from "./explosionTransforms";
 import type { ViewerState } from "./types";
-export function CameraRig({ state }: { state: ViewerState }) {
+import { samplePattern, getPrintPattern, NOZZLE_Y } from "./printPatterns";
+export function CameraRig({
+  state,
+  time,
+}: {
+  state: ViewerState;
+  time: React.RefObject<number>;
+}) {
   const controls = useRef<OrbitImpl>(null);
   const goal = useRef<{ eye: Vector3; target: Vector3 } | null>(null);
   const { camera, scene, invalidate, size } = useThree();
@@ -71,11 +78,48 @@ export function CameraRig({ state }: { state: ViewerState }) {
         Math.max(1, extent * 0.28 + 0.6) * (size.width < 500 ? 1.25 : 1);
       eye = target.clone().add(new Vector3(4, 2.3, 7).multiplyScalar(distance));
     }
+    if (
+      state.mode === "Print demo" &&
+      !state.selected &&
+      state.printCamera !== "Overview"
+    ) {
+      const frame = samplePattern(time.current, state.printModel);
+      const pattern = getPrintPattern(state.printModel);
+      const height = pattern.layers * pattern.layerHeight;
+      const built = (frame.active.layer + 1) * pattern.layerHeight;
+      target =
+        state.printCamera === "Nozzle"
+          ? new Vector3(frame.x, NOZZLE_Y, frame.z)
+          : new Vector3(
+              0,
+              state.printCamera === "Inspect"
+                ? height / 2
+                : frame.baseY + built / 2,
+              0,
+            );
+      const offset =
+        state.printCamera === "Nozzle"
+          ? new Vector3(2.4, 1.2, 3.2)
+          : state.printModel === "gears"
+            ? new Vector3(2.4, 3.8, 3.2)
+            : new Vector3(3.3, 2.1, 4.5);
+      const aspectScale = Math.max(1, 0.95 / (size.width / size.height));
+      eye = target.clone().add(offset.multiplyScalar(aspectScale));
+    }
     goal.current = { eye, target };
     invalidate();
     // Explosion framing is intentional only when the camera action changes, so sliders never fight user orbit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.cameraKey, state.selected, state.view, state.showAMS, size.width]);
+  }, [
+    state.cameraKey,
+    state.selected,
+    state.view,
+    state.showAMS,
+    state.printCamera,
+    state.printModel,
+    size.width,
+    size.height,
+  ]);
   useFrame((_, dt) => {
     if (goal.current && controls.current) {
       const alpha = state.reducedMotion ? 1 : 1 - Math.exp(-dt * 5);
@@ -85,6 +129,31 @@ export function CameraRig({ state }: { state: ViewerState }) {
       if (camera.position.distanceTo(goal.current.eye) < 0.006)
         goal.current = null;
       else invalidate();
+    } else if (
+      controls.current &&
+      state.mode === "Print demo" &&
+      !state.selected &&
+      ["Nozzle", "Object"].includes(state.printCamera)
+    ) {
+      const frame = samplePattern(time.current, state.printModel);
+      const next =
+        state.printCamera === "Nozzle"
+          ? new Vector3(frame.x, NOZZLE_Y, frame.z)
+          : new Vector3(
+              0,
+              frame.baseY +
+                ((frame.active.layer + 1) *
+                  getPrintPattern(state.printModel).layerHeight) /
+                  2,
+              0,
+            );
+      const delta = next
+        .sub(controls.current.target)
+        .multiplyScalar(state.reducedMotion ? 1 : 1 - Math.exp(-dt * 5));
+      controls.current.target.add(delta);
+      camera.position.add(delta);
+      controls.current.update();
+      if (delta.length() > 0.0001) invalidate();
     }
   });
   return (

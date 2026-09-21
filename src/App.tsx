@@ -56,6 +56,12 @@ import {
 import { Library } from "./ui/Library";
 import { SourceLink } from "./ui/SourceLink";
 import { PrintTour } from "./ui/PrintTour";
+import { PrintControls } from "./ui/PrintControls";
+import {
+  getPrintInfo,
+  type PrintModel,
+  type PrintCamera,
+} from "./data/printGallery";
 import { printTour } from "./data/printTour";
 import "./style.css";
 const PrinterScene = lazy(() => import("./scene/PrinterScene"));
@@ -139,8 +145,45 @@ export default function App() {
       ...s,
       printSeek: progress,
       printKey: s.printKey + 1,
+      printCamera:
+        progress < 100 && s.printCamera === "Inspect"
+          ? "Object"
+          : s.printCamera,
       running: running && !s.reducedMotion,
       explosion: 0,
+    }));
+  }
+  function choosePrint(model: PrintModel) {
+    setPrintProgress(0);
+    setState((s) => ({
+      ...s,
+      printModel: model,
+      printSeek: 0,
+      printKey: s.printKey + 1,
+      printCamera: s.printCamera === "Inspect" ? "Object" : s.printCamera,
+      selected: null,
+      explosion: 0,
+      running: !s.reducedMotion,
+      cameraKey: s.cameraKey + 1,
+    }));
+  }
+  function choosePrintCamera(camera: PrintCamera) {
+    if (camera === "Inspect") setPrintProgress(100);
+    setState((s) => ({
+      ...s,
+      printCamera: camera,
+      view: "Perspective",
+      selected: null,
+      section: "Off",
+      cameraKey: s.cameraKey + 1,
+      ...(camera === "Inspect"
+        ? {
+            printSeek: 100,
+            printKey: s.printKey + 1,
+            running: false,
+            explosion: 0,
+          }
+        : {}),
     }));
   }
   const closeTour = useCallback(() => {
@@ -171,6 +214,7 @@ export default function App() {
     setState((s) => ({
       ...s,
       mode: step.mode,
+      printCamera: "Overview",
       printSeek: 0,
       printKey: s.printKey + 1,
       tourFocus: step.focus,
@@ -201,6 +245,7 @@ export default function App() {
       ...s,
       tourFocus: [],
       selected: id,
+      printCamera: "Overview",
       running: false,
       ghost:
         byId[id].category === "Enclosure"
@@ -243,6 +288,7 @@ export default function App() {
       ...s,
       tourFocus: [],
       mode,
+      printCamera: "Overview",
       printSeek: 0,
       printKey: s.printKey + 1,
       selected: null,
@@ -637,17 +683,32 @@ export default function App() {
             </div>
             <div className="tree-footer">
               <span className="status-dot" />
-              {
-                parts.filter(
-                  (p) =>
-                    !state.hidden.includes(p.id) &&
-                    (state.showAMS || p.id !== "ams") &&
-                    (!state.isolate.length || state.isolate.includes(p.id)),
-                ).length
-              }{" "}
-              components shown
+              {state.mode === "Print demo" &&
+              state.printCamera === "Inspect" ? (
+                "Finished print only"
+              ) : (
+                <>
+                  {
+                    parts.filter(
+                      (p) =>
+                        !state.hidden.includes(p.id) &&
+                        (state.showAMS || p.id !== "ams") &&
+                        (!state.isolate.length || state.isolate.includes(p.id)),
+                    ).length
+                  }{" "}
+                  components shown
+                </>
+              )}
               <button
-                onClick={() => update({ hidden: [], ghost: [], isolate: [] })}
+                onClick={() =>
+                  update({
+                    hidden: [],
+                    ghost: [],
+                    isolate: [],
+                    printCamera: "Overview",
+                    cameraKey: state.cameraKey + 1,
+                  })
+                }
               >
                 Show all
               </button>
@@ -666,7 +727,11 @@ export default function App() {
           </aside>
           <section
             className={
-              "viewer-column " + (tourStep !== null ? "tour-active" : "")
+              "viewer-column " +
+              (tourStep !== null ? "tour-active " : "") +
+              (state.mode === "Print demo" && state.printCamera === "Inspect"
+                ? "print-inspection"
+                : "")
             }
             ref={viewerRef}
             aria-label="Interactive 3D workspace"
@@ -675,12 +740,27 @@ export default function App() {
               <div className="scene-heading">
                 <div className="eyebrow">
                   <span className="status-dot" />
-                  INSIDE THE MACHINE
+                  {state.mode === "Print demo" &&
+                  state.printCamera === "Inspect"
+                    ? "FINISHED PRINT STUDY"
+                    : "INSIDE THE MACHINE"}
                 </div>
                 <h1>
-                  Bambu Lab <span>H2D</span>
+                  {state.mode === "Print demo" &&
+                  state.printCamera === "Inspect" ? (
+                    getPrintInfo(state.printModel).name
+                  ) : (
+                    <>
+                      Bambu Lab <span>H2D</span>
+                    </>
+                  )}
                 </h1>
-                <p>A closer look. A deeper understanding.</p>
+                <p>
+                  {state.mode === "Print demo" &&
+                  state.printCamera === "Inspect"
+                    ? "Drag to orbit. Reveal the structure with Walls & infill."
+                    : "A closer look. A deeper understanding."}
+                </p>
                 {tourStep === null && (
                   <button
                     ref={tourTrigger}
@@ -763,6 +843,7 @@ export default function App() {
                       selected: null,
                       cameraKey: state.cameraKey + 1,
                       view: "Perspective",
+                      printCamera: "Overview",
                     })
                   }
                   aria-label="Reset camera"
@@ -909,6 +990,7 @@ export default function App() {
                   onChange={(e) =>
                     update({
                       view: e.target.value as ViewerState["view"],
+                      printCamera: "Overview",
                       selected: null,
                       cameraKey: state.cameraKey + 1,
                     })
@@ -974,7 +1056,7 @@ export default function App() {
                       : state.mode === "Print demo"
                         ? printProgress === 100
                           ? "Print complete"
-                          : "Printing lattice lantern"
+                          : `Printing ${getPrintInfo(state.printModel).name.toLowerCase()}`
                         : "System animation"}
                   </span>
                   <select
@@ -1007,41 +1089,14 @@ export default function App() {
               )}
             </div>
             {state.mode === "Print demo" && (
-              <section
-                className="print-timeline"
-                aria-label="Lattice lantern print progress"
-              >
-                <div className="print-timeline-title">
-                  <strong>Lattice lantern</strong>
-                  <span>128 layers · illustrative toolpath</span>
-                  <output aria-label="Print completion">
-                    {printProgress}%
-                  </output>
-                </div>
-                <div className="print-timeline-controls">
-                  <button
-                    onClick={() => seekPrint(0, true)}
-                    aria-label="Restart print"
-                  >
-                    <RotateCcw size={15} />
-                  </button>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    step="1"
-                    value={printProgress}
-                    aria-label="Print progress"
-                    onChange={(e) => seekPrint(Number(e.target.value))}
-                  />
-                  <button
-                    className="print-finish"
-                    onClick={() => seekPrint(100)}
-                  >
-                    Show finished print <ArrowRight size={13} />
-                  </button>
-                </div>
-              </section>
+              <PrintControls
+                state={state}
+                progress={printProgress}
+                onSeek={seekPrint}
+                onModel={choosePrint}
+                onCamera={choosePrintCamera}
+                onChange={update}
+              />
             )}
             {tourStep !== null && (
               <PrintTour
@@ -1291,14 +1346,25 @@ export default function App() {
               ) : (
                 <>
                   <div className="overview-kicker">BAMBU LAB / H SERIES</div>
-                  <h2>Meet the H2D.</h2>
+                  <h2>
+                    {state.mode === "Print demo"
+                      ? "Print studio."
+                      : "Meet the H2D."}
+                  </h2>
                   <p className="description">
                     Two nozzles. One connected system. Explore the assemblies
                     that turn filament into a finished object.
                   </p>
                   {systemGuides[state.mode] && (
                     <div className="system-guide">
-                      <h3>{systemGuides[state.mode]!.title}</h3>
+                      <h3>
+                        {state.mode === "Print demo"
+                          ? getPrintInfo(state.printModel).name
+                          : systemGuides[state.mode]!.title}
+                      </h3>
+                      {state.mode === "Print demo" && (
+                        <p>{getPrintInfo(state.printModel).description}</p>
+                      )}
                       <p>{systemGuides[state.mode]!.body}</p>
                       {systemGuides[state.mode]!.legend?.map((line) => (
                         <small key={line}>{line}</small>

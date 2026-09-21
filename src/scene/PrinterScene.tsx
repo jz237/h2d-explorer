@@ -14,7 +14,8 @@ import { CameraRig } from "./CameraRig";
 import { LabelLayout } from "./LabelLayout";
 import type { ViewerState } from "./types";
 import { PrintDemo } from "./PrintDemo";
-import { PRINT_DURATION, samplePrint } from "./printPaths";
+import { samplePattern } from "./printPatterns";
+import { getPrintInfo, type PrintModel } from "../data/printGallery";
 
 const toolIds = new Set([
   "carriage",
@@ -67,9 +68,14 @@ export function highlighted(p: Part, s: ViewerState) {
       return true;
   }
 }
-function motion(t: number, mode?: string, nozzle = "Left") {
+function motion(
+  t: number,
+  mode?: string,
+  nozzle = "Left",
+  model: PrintModel = "lantern",
+) {
   if (mode === "Print demo") {
-    const frame = samplePrint(t);
+    const frame = samplePattern(t, model);
     return {
       x: frame.x + (nozzle === "Left" ? 0.24 : -0.24),
       z: frame.z - 0.65,
@@ -190,6 +196,7 @@ function AssemblyPart({
   const [hovered, setHovered] = useState(false);
   const { invalidate } = useThree();
   const hidden =
+    (state.mode === "Print demo" && state.printCamera === "Inspect") ||
     state.hidden.includes(part.id) ||
     (!state.showAMS && part.id === "ams") ||
     (state.isolate.length > 0 && !state.isolate.includes(part.id));
@@ -274,7 +281,7 @@ function AssemblyPart({
     if (!group.current || hidden) return;
     const pos = explodedPosition(part, state.explosion);
     const demo = ["Motion", "Print demo", "Dual nozzle"].includes(state.mode);
-    const m = motion(time.current, state.mode, state.nozzle);
+    const m = motion(time.current, state.mode, state.nozzle, state.printModel);
     if (demo && state.explosion < 0.02) {
       if (toolIds.has(part.id)) {
         pos[0] += m.x;
@@ -284,7 +291,7 @@ function AssemblyPart({
       if (["bed", "plate", "bed-frame", "bed-sensors"].includes(part.id))
         pos[1] +=
           state.mode === "Print demo"
-            ? samplePrint(time.current).bedOffset
+            ? samplePattern(time.current, state.printModel).bedOffset
             : state.mode === "Motion"
               ? -(1 + Math.sin(time.current * 0.2)) * 0.45
               : 0;
@@ -393,6 +400,7 @@ function World({
   onPrintProgress: (progress: number) => void;
 }) {
   const time = useRef(0);
+  const printDuration = getPrintInfo(state.printModel).duration;
   const lastPrintProgress = useRef(-1);
   const { invalidate, gl } = useThree();
   const clipping = useMemo(() => {
@@ -420,11 +428,11 @@ function World({
     if (state.running && !state.reducedMotion) {
       time.current += Math.min(dt, 0.05) * state.speed;
       if (state.mode === "Print demo")
-        time.current = Math.min(time.current, PRINT_DURATION);
+        time.current = Math.min(time.current, printDuration);
       invalidate();
     }
     if (state.mode === "Print demo") {
-      const progress = Math.floor((time.current / PRINT_DURATION) * 100 + 1e-7);
+      const progress = Math.floor((time.current / printDuration) * 100 + 1e-7);
       if (progress !== lastPrintProgress.current) {
         lastPrintProgress.current = progress;
         onPrintProgress(progress);
@@ -438,14 +446,21 @@ function World({
     time.current = 0;
     lastPrintProgress.current = -1;
     invalidate();
-  }, [state.mode, invalidate]);
+  }, [state.mode, state.printModel, invalidate]);
   useEffect(() => {
     if (state.mode === "Print demo") {
-      time.current = (state.printSeek * PRINT_DURATION) / 100;
+      time.current = (state.printSeek * printDuration) / 100;
       lastPrintProgress.current = -1;
       invalidate();
     }
-  }, [state.printSeek, state.printKey, state.mode, invalidate]);
+  }, [
+    state.printSeek,
+    state.printKey,
+    state.mode,
+    state.printModel,
+    printDuration,
+    invalidate,
+  ]);
   const modeLabels: Partial<Record<ViewerState["mode"], string[]>> = {
     Standard: ["display", "door", "plate"],
     "Dual nozzle": ["extruders", "hotend-left", "hotend-right", "lift"],
@@ -523,7 +538,7 @@ function World({
         <Flow state={state} time={time} />
       )}
       {state.mode === "Print demo" && state.explosion < 0.02 && (
-        <PrintDemo time={time} />
+        <PrintDemo time={time} state={state} clipping={clipping} />
       )}
       {state.mode === "Dual nozzle" && (
         <group position={[0, 1.99, 0]}>
@@ -549,7 +564,7 @@ function World({
           ))}
         </group>
       )}
-      <CameraRig state={state} />
+      <CameraRig state={state} time={time} />
       <LabelLayout />
     </>
   );

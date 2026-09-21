@@ -33,7 +33,9 @@ The output is a static `dist/` folder. Relative asset paths allow deployment bel
 - Staged **0–100% explosion**, auto explode, Home, camera reset and seven camera presets.
 - Ten visualization modes: Standard, Exploded, Motion, Filament, Heat map, Airflow, Electronics, Maintenance, Print demo and Dual nozzle.
 - Left/right filament paths, moving XY gantry and Z bed, a growing layer example, and a simplified left-nozzle lift with a model/support-material specimen.
-- **Lattice lantern print demo:** 128 layers build an original fluted pedestal, crossing helical ribs, diamond windows and scalloped crown. The nozzle follows the same paths that reveal the deposited geometry; travel between ribs does not extrude. Scrub any stage, pause, restart or jump to the finished object. The 72-second teaching sequence stops with the head parked clear of the model.
+- **Four-model print gallery:** lattice lantern, miniature castle, gear assembly and sculpted vase. Each has original layer paths; the nozzle follows exactly the paths used to reveal deposited geometry. Studies use 52–128 layers and 58–80 second teaching sequences. Scrub, pause, restart or jump to completion.
+- **Walls & infill:** independently show outer walls, amber infill, blue supports and magenta travel paths. The castle demonstrates support under its gate arch; the other studies have no support paths. Travel traces show completed moves on the current layer. Visibility does not recalculate paths or timing.
+- **Print cameras:** Printer overview, Follow nozzle, Focus on object and Inspect finished print. Tracking preserves the user's orbit offset. Finished inspection parks the print at the origin and hides the machine; restarting or scrubbing returns to object focus. Reduced motion also applies to these camera transitions.
 - Source-linked component information, **40 searchable specifications**, official maintenance filters, a documentation library and a full accuracy statement.
 - X/Y/Z clipping planes, label categories, screen-space label spacing, optional AMS 2 Pro, and GLB export.
 - Responsive assembly drawer and inspector sheet, touch gestures, keyboard controls, focus styles and reduced-motion support.
@@ -66,10 +68,12 @@ src/
     documentation.ts              Library groupings
     systemGuides.ts               Educational mode explanations
     printTour.ts                  Six source-linked conceptual print stages
+    printGallery.ts               Print studies, feature colors and camera types
   scene/
     models.ts                     Original procedural component geometry
     PrinterScene.tsx              Materials, selections, animation and rendering
     printPaths.ts                 Lantern layer paths and synchronized nozzle/bed sampling
+    printPatterns.ts              Gallery path generation, feature counts and sampling
     PrintDemo.tsx                  Incrementally revealed deposition geometry
     CameraRig.tsx                 Orbit controls and animated framing
     LabelLayout.tsx               Sparse label collision management
@@ -79,6 +83,7 @@ src/
     Library.tsx                   Specifications, documents and accuracy pages
     SourceLink.tsx                Consistent links to evidence
     PrintTour.tsx                 Keyboard-accessible step navigation and notes
+    PrintControls.tsx             Gallery, layer visibility, timeline and camera controls
 tests/
   explorer.spec.ts                 Production-browser interaction tests
 ```
@@ -133,7 +138,7 @@ npm test
 
 Tests launch installed Google Chrome through Playwright against the production preview. They cover all modes, camera presets, clipping controls, part search and sources, isolate/restore, maintenance empty states, specs search, documentation, mobile drawer/sheet behavior, reduced motion, help focus and binary GLB structure/provenance. Screenshots and downloads go to ignored `work/`; failure traces go to ignored `test-results/`. Vite does not watch these directories, avoiding locked download issues on Windows.
 
-The suite contains 13 browser tests and two path validation tests, including all six tour steps, Back / Finish / Escape, focus restoration, exiting to free exploration, the new cover, mobile tour layout, Balanced pixel density, print scrubbing, pause/restart and completion. Path checks cover all 128 layers, bed bounds, continuity, travel moves, and nozzle/deposition alignment. Mobile checks use desktop Chrome emulation, not a physical phone or mobile GPU.
+The suite contains 16 browser tests and three path validation tests, including all six tour steps, Back / Finish / Escape, focus restoration, mobile layout, rendering quality, gallery selection, layer visibility, print cameras, scrubbing, restart and completion. Path checks cover every study's layers, bed bounds, continuity, feature counts, travel moves and nozzle/deposition alignment. Mobile checks use desktop Chrome emulation, not a physical phone or mobile GPU.
 
 To test a published origin, set `TEST_BASE_URL` to the exhibit URL. The tests use the supplied base URL without launching a local preview.
 

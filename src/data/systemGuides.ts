@@ -37,8 +37,8 @@ export const systemGuides: Partial<
     body: "Filter the tree by documented intervals. “Periodic” includes three-month cleaning and spool-count checks. Frequent engineering-material use can require shorter intervals. Follow the linked official procedure.",
   },
   "Print demo": {
-    title: "A lattice lantern, one layer at a time",
-    body: "128 layers form a fluted pedestal, crossing spiral ribs, diamond windows and a scalloped crown. The nozzle follows each deposited path and travels between separate ribs without extruding. Scrub the timeline to inspect any stage, or show the finished print. The color gradient makes the layers easier to read; it does not simulate material switching. This is an original teaching model, not slicer-generated G-code.",
+    title: "A print, one layer at a time",
+    body: "Choose a study from the gallery. Hide outer walls to reveal amber infill, toggle blue supports or trace magenta travel moves on the current layer. Follow the nozzle, focus on the object or inspect the finished print with the machine hidden. Colors identify teaching features, not material changes. These original paths illustrate construction; they are not slicer-generated G-code or functional manufacturing files.",
   },
   "Dual nozzle": {
     title: "Two materials on one carriage",
